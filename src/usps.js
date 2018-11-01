@@ -1,15 +1,15 @@
 // external dependencies
-const request = require('request');
-const builder = require('xmlbuilder');
-const xml2js = require('xml2js');
+const request = require("request");
+const builder = require("xmlbuilder");
+const xml2js = require("xml2js");
 
 // internal dependencies
-const USPSError = require('./error.js');
+const USPSError = require("./error.js");
 
 module.exports = class USPS {
   constructor(config) {
     if (!(config && config.server && config.userId)) {
-      throw new USPSError('must pass usps server url and userId');
+      throw new USPSError("must pass usps server url and userId");
     }
     this.config = {
       ttl: 100000,
@@ -37,12 +37,12 @@ module.exports = class USPS {
       Revision: 1,
       Address: {
         FirmName: address.firm_name,
-        Address1: address.street2 || '',
+        Address1: address.street2 || "",
         Address2: address.street1,
         City: address.city,
         State: address.state,
         Zip5: address.zip,
-        Zip4: address.zip4 || ''
+        Zip4: address.zip4 || ""
       }
     };
 
@@ -50,46 +50,53 @@ module.exports = class USPS {
       obj.Address.Urbanization = address.urbanization;
     }
 
-    callUSPS('Verify', 'AddressValidate', 'Address', this.config, obj, (err, address) => {
-      if (err) {
-        return callback(err);
-      }
-
-      const result = {
-        street1: address.Address2,
-        street2: address.Address1 || '',
-        city: address.City,
-        zip: address.Zip5,
-        state: address.State,
-        zip4: address.Zip4
-      };
-
-      const optional = {
-        FirmName: 'firm_name',
-        Address2Abbreviation: 'address2_abbreviation',
-        CityAbbreviation: 'city_abbreviation',
-        Urbanization: 'urbanization',
-        DeliveryPoint: 'delivery_point',
-        CarrierRoute: 'carrier_route',
-        Footnotes: 'footnotes',
-        DPVConfirmation: 'dpv_confirmation',
-        DPVCMRA: 'dpvcmra',
-        DPVFalse: 'dpv_false',
-        DPVFootnotes: 'dpv_footnotes',
-        Business: 'business',
-        CentralDeliveryPoint: 'central_delivery_point',
-        Vacant: 'vacant'
-      };
-
-      Object.keys(optional).forEach(key => {
-        const resultKey = optional[key];
-        if (address[key]) {
-          result[resultKey] = address[key];
+    callUSPS(
+      "Verify",
+      "AddressValidate",
+      "Address",
+      this.config,
+      obj,
+      (err, address) => {
+        if (err) {
+          return callback(err);
         }
-      });
 
-      callback(null, result);
-    });
+        const result = {
+          street1: address.Address2,
+          street2: address.Address1 || "",
+          city: address.City,
+          zip: address.Zip5,
+          state: address.State,
+          zip4: address.Zip4
+        };
+
+        const optional = {
+          FirmName: "firm_name",
+          Address2Abbreviation: "address2_abbreviation",
+          CityAbbreviation: "city_abbreviation",
+          Urbanization: "urbanization",
+          DeliveryPoint: "delivery_point",
+          CarrierRoute: "carrier_route",
+          Footnotes: "footnotes",
+          DPVConfirmation: "dpv_confirmation",
+          DPVCMRA: "dpvcmra",
+          DPVFalse: "dpv_false",
+          DPVFootnotes: "dpv_footnotes",
+          Business: "business",
+          CentralDeliveryPoint: "central_delivery_point",
+          Vacant: "vacant"
+        };
+
+        Object.keys(optional).forEach(key => {
+          const resultKey = optional[key];
+          if (address[key]) {
+            result[resultKey] = address[key];
+          }
+        });
+
+        callback(null, result);
+      }
+    );
   }
 
   /**
@@ -107,26 +114,33 @@ module.exports = class USPS {
   zipCodeLookup(address, callback) {
     const obj = {
       Address: {
-        Address1: address.street2 || '',
+        Address1: address.street2 || "",
         Address2: address.street1,
         City: address.city,
         State: address.state
       }
     };
 
-    callUSPS('ZipCodeLookup', 'ZipCodeLookup', 'Address', this.config, obj, (err, address) => {
-      if (err) {
-        return callback(err);
-      }
+    callUSPS(
+      "ZipCodeLookup",
+      "ZipCodeLookup",
+      "Address",
+      this.config,
+      obj,
+      (err, address) => {
+        if (err) {
+          return callback(err);
+        }
 
-      callback(null, {
-        street1: address.Address2,
-        street2: address.Address1 ? address.Address1 : '',
-        city: address.City,
-        state: address.State,
-        zip: `${address.Zip5}-${address.Zip4}`
-      });
-    });
+        callback(null, {
+          street1: address.Address2,
+          street2: address.Address1 ? address.Address1 : "",
+          city: address.City,
+          state: address.State,
+          zip: `${address.Zip5}-${address.Zip4}`
+        });
+      }
+    );
   }
 
   /**
@@ -139,8 +153,8 @@ module.exports = class USPS {
   pricingRateV4(pricingRate, callback) {
     const obj = {
       Package: {
-        '@ID': '1ST',
-        Service: pricingRate.Service || 'PRIORITY',
+        "@ID": "1ST",
+        Service: pricingRate.Service || "PRIORITY",
         ZipOrigination: pricingRate.ZipOrigination || 55401,
         ZipDestination: pricingRate.ZipDestination,
         Pounds: pricingRate.Pounds,
@@ -155,7 +169,7 @@ module.exports = class USPS {
       }
     };
 
-    callUSPS('RateV4', 'RateV4', 'Package', this.config, obj, (err, result) => {
+    callUSPS("RateV4", "RateV4", "Package", this.config, obj, (err, result) => {
       if (err) {
         return callback(err);
       }
@@ -178,26 +192,71 @@ module.exports = class USPS {
       }
     };
 
-    callUSPS('CityStateLookup', 'CityStateLookup', 'ZipCode', this.config, obj, (err, address) => {
-      if (err) {
-        return callback(err);
-      }
+    callUSPS(
+      "CityStateLookup",
+      "CityStateLookup",
+      "ZipCode",
+      this.config,
+      obj,
+      (err, address) => {
+        if (err) {
+          return callback(err);
+        }
 
-      callback(err, {
-        city: address.City,
-        state: address.State,
-        zip: address.Zip5
-      });
-    });
+        callback(err, {
+          city: address.City,
+          state: address.State,
+          zip: address.Zip5
+        });
+      }
+    );
+  }
+
+  /**
+    Tracking number lookup
+
+    @param {String} tracking Tracking number to look up
+    @param {Function} callback The callback function
+    @returns {Object} instance of module
+  */
+  track(tracking, callback) {
+    const obj = {
+      TrackID: {
+        "@ID": tracking
+      }
+    };
+
+    callUSPS(
+      "TrackV2",
+      "TrackField",
+      "TrackInfo",
+      this.config,
+      obj,
+      (err, result) => {
+        if (err) {
+          return callback(err);
+        }
+        callback(err, result);
+      },
+      "TrackResponse"
+    );
   }
 };
 
 /**
   Method to call USPS
 */
-function callUSPS(api, method, property, config, params, callback) {
+function callUSPS(
+  api,
+  method,
+  property,
+  config,
+  params,
+  callback,
+  responseNameOverride
+) {
   const requestName = `${method}Request`;
-  const responseName = `${method}Response`;
+  const responseName = responseNameOverride || `${method}Response`;
 
   const obj = {
     [requestName]: {
@@ -205,7 +264,7 @@ function callUSPS(api, method, property, config, params, callback) {
       // jshint ignore:start
       ...params,
       // jshint ignore:end
-      ['@USERID']: config.userId
+      ["@USERID"]: config.userId
     }
   };
 
@@ -217,15 +276,18 @@ function callUSPS(api, method, property, config, params, callback) {
       API: api,
       XML: xml
     },
-    timeout: config.ttl
+    timeout: config.ttl,
+    debug: true
   };
 
   request(opts, (err, res, body) => {
     if (err) {
-      return callback(new USPSError(err.message, err, {
-        method: api,
-        during: 'request'
-      }));
+      return callback(
+        new USPSError(err.message, err, {
+          method: api,
+          during: "request"
+        })
+      );
     }
 
     const parseOptions = {
@@ -236,17 +298,19 @@ function callUSPS(api, method, property, config, params, callback) {
       let errMessage;
 
       if (err) {
-        return callback(new USPSError(err.message, err, {
-          method: api,
-          during: 'xml parse'
-        }));
+        return callback(
+          new USPSError(err.message, err, {
+            method: api,
+            during: "xml parse"
+          })
+        );
       }
 
       // may have a root-level error
       if (result.Error) {
         try {
           errMessage = result.Error.Description.trim();
-        } catch(e) {
+        } catch (e) {
           errMessage = result.Error;
         }
 
@@ -258,7 +322,6 @@ function callUSPS(api, method, property, config, params, callback) {
         resultDotNotation looks like 'key.key'
         though it may actually have arrays, so returning first cell
       */
-
       var specificResult = {};
       if (result && result[responseName] && result[responseName][property]) {
         specificResult = result[responseName][property];
@@ -268,7 +331,7 @@ function callUSPS(api, method, property, config, params, callback) {
       if (specificResult.Error) {
         try {
           errMessage = specificResult.Error.Description.trim();
-        } catch(e) {
+        } catch (e) {
           errMessage = specificResult.Error;
         }
 
